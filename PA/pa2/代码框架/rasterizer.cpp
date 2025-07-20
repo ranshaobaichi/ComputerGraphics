@@ -158,13 +158,22 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t, int s, int threshold
                     /* against black edge part */
                     // threshold is for black edge avoidance
                     // the bigger the threshold, the better the black edge avoidance effect,
-                    threshold = std::max(1, std::min(threshold, N));
-                    if (covered >= threshold)  // Only render the pixel if it is covered by enough samples and is in front of the existing pixel
-                    {
-                        depth_buf[get_index(x, y)] = z_interpolated;
-                        Eigen::Vector3f color = t.getColor() * (float(covered) / N);
-                        set_pixel(Eigen::Vector3f(x, y, 0), color);
-                    }
+                    // threshold = std::max(1, std::min(threshold, N));
+                    // if (covered >= threshold)  // Only render the pixel if it is covered by enough samples and is in front of the existing pixel
+                    // {
+                    //     depth_buf[get_index(x, y)] = z_interpolated;
+                    //     Eigen::Vector3f color = t.getColor() * (float(covered) / N);
+                    //     set_pixel(Eigen::Vector3f(x, y, 0), color);
+                    // }
+                    
+                    /* use the alpha to mix color */
+                    int idx = get_index(x, y);
+                    float alpha = float(covered) / float(N);
+                    Eigen::Vector3f dst = frame_buf[idx];  
+                    Eigen::Vector3f src = t.getColor();
+                    Eigen::Vector3f blended = src * alpha + dst * (1.0f - alpha);
+                    depth_buf[idx] = z_interpolated;
+                    set_pixel(Eigen::Vector3f(x,y,0), blended);
                 }
                 else if (insideTriangle(x, y, t.v))
                 {
