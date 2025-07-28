@@ -3,6 +3,7 @@
 #include "Object.hpp"
 
 #include <cstring>
+#include <memory>
 
 bool rayTriangleIntersect(const Vector3f& v0, const Vector3f& v1, const Vector3f& v2, const Vector3f& orig,
                           const Vector3f& dir, float& tnear, float& u, float& v)
