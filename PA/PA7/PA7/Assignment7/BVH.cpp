@@ -108,9 +108,40 @@ Intersection BVHAccel::Intersect(const Ray& ray) const
 Intersection BVHAccel::getIntersection(BVHBuildNode* node, const Ray& ray) const
 {
     // TODO Traverse the BVH to find intersection
+    if (node == nullptr) {
+        return Intersection();
+    }
 
+    if (node->bounds.IntersectP(ray, ray.direction_inv, {ray.direction.x < 0, ray.direction.y < 0, ray.direction.z < 0})) 
+    {
+        if (node->left == nullptr && node->right == nullptr && node->object != nullptr)
+        {
+            return node->object->getIntersection(ray);
+        }  
+
+        Intersection l_intersection, r_intersection;
+        if (node->left) {
+            l_intersection = getIntersection(node->left, ray);
+        }
+        if (node->right) {
+            r_intersection = getIntersection(node->right, ray);
+        }
+        
+        if (l_intersection.happened && r_intersection.happened) {
+            if (l_intersection.distance < r_intersection.distance) {
+                return l_intersection;
+            } else {
+                return r_intersection;
+            }
+        } else if (l_intersection.happened) {
+            return l_intersection;
+        } else if (r_intersection.happened) {
+            return r_intersection;
+        }
+    }
+
+    return Intersection();
 }
-
 
 void BVHAccel::getSample(BVHBuildNode* node, float p, Intersection &pos, float &pdf){
     if(node->left == nullptr || node->right == nullptr){

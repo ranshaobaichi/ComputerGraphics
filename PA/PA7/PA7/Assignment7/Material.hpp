@@ -7,7 +7,7 @@
 
 #include "Vector.hpp"
 
-enum MaterialType { DIFFUSE};
+enum MaterialType { DIFFUSE, MICROFACET };
 
 class Material{
 private:
@@ -94,6 +94,10 @@ public:
     float specularExponent;
     //Texture tex;
 
+    /* Microfacet */
+    float roughness = 0.2f; // 粗糙度参数
+    float metallic = 1.0f;  // 金属度参数
+
     inline Material(MaterialType t=DIFFUSE, Vector3f e=Vector3f(0,0,0));
     inline MaterialType getType();
     //inline Vector3f getColor();
@@ -107,7 +111,6 @@ public:
     inline float pdf(const Vector3f &wi, const Vector3f &wo, const Vector3f &N);
     // given a ray, calculate the contribution of this ray
     inline Vector3f eval(const Vector3f &wi, const Vector3f &wo, const Vector3f &N);
-
 };
 
 Material::Material(MaterialType t, Vector3f e){
@@ -143,6 +146,7 @@ Vector3f Material::sample(const Vector3f &wi, const Vector3f &N){
             break;
         }
     }
+    return Vector3f(0.f);
 }
 
 float Material::pdf(const Vector3f &wi, const Vector3f &wo, const Vector3f &N){
@@ -157,6 +161,7 @@ float Material::pdf(const Vector3f &wi, const Vector3f &wo, const Vector3f &N){
             break;
         }
     }
+    return 0.0f;
 }
 
 Vector3f Material::eval(const Vector3f &wi, const Vector3f &wo, const Vector3f &N){
@@ -173,7 +178,49 @@ Vector3f Material::eval(const Vector3f &wi, const Vector3f &wo, const Vector3f &
                 return Vector3f(0.0f);
             break;
         }
+        case MICROFACET:
+        {
+            // 确保出射方向在正半球
+            if (dotProduct(wo, N) <= 0) return Vector3f(0.0f);
+
+            // 计算半向量
+            Vector3f h = normalize(wo + wi);
+            
+            // 计算各种点积，用于后续计算
+            float NoV = std::max(dotProduct(N, wo), 0.0f);
+            float NoL = std::max(dotProduct(N, wi), 0.0f);
+            float NoH = std::max(dotProduct(N, h), 0.0f);
+            float VoH = std::max(dotProduct(wo, h), 0.0f);
+            
+            if (NoL <= 0) return Vector3f(0.0f);
+            
+            // 1. 计算D项 (GGX分布)
+            float alpha = roughness * roughness;
+            float alpha2 = alpha * alpha;
+            float denom = NoH * NoH * (alpha2 - 1.0f) + 1.0f;
+            float D = alpha2 / (M_PI * denom * denom);
+            
+            // 2. 计算G项 (Smith几何遮挡函数)
+            float k = (roughness + 1) * (roughness + 1) / 8.0f;
+            float G1V = NoV / (NoV * (1 - k) + k);
+            float G1L = NoL / (NoL * (1 - k) + k);
+            float G = G1V * G1L;
+            
+            // 3. 计算F项 (Schlick近似)
+            Vector3f F0 = lerp(Vector3f(0.04f), Kd, metallic);
+            Vector3f F = F0 + (Vector3f(1.0f) - F0) * std::pow(1.0f - VoH, 5.0f);
+            
+            // 合并微表面BRDF
+            Vector3f specular = (D * F * G) / (4 * NoV * NoL);
+            
+            // 计算漫反射部分 (能量守恒)
+            Vector3f diffuse = (Vector3f(1.0f) - F) * (1.0f - metallic) * Kd / M_PI;
+            
+            // 返回最终BRDF
+            return diffuse + specular;
+        }
     }
+    return Vector3f(0.0f);
 }
 
 #endif //RAYTRACING_MATERIAL_H

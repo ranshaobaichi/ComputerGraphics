@@ -24,10 +24,16 @@ void Renderer::Render(const Scene& scene)
     int m = 0;
 
     // change the spp value to change sample ammount
-    int spp = 16;
+    // int spp = 16;
+    int spp = 8;
     std::cout << "SPP: " << spp << "\n";
+
+    #pragma omp parallel for collapse(2) schedule(dynamic)
     for (uint32_t j = 0; j < scene.height; ++j) {
         for (uint32_t i = 0; i < scene.width; ++i) {
+            // 用 j 和 i 计算索引，而非共享的 m
+            int idx = j * scene.width + i;
+            
             // generate primary ray direction
             float x = (2 * (i + 0.5) / (float)scene.width - 1) *
                       imageAspectRatio * scale;
@@ -35,11 +41,9 @@ void Renderer::Render(const Scene& scene)
 
             Vector3f dir = normalize(Vector3f(-x, y, 1));
             for (int k = 0; k < spp; k++){
-                framebuffer[m] += scene.castRay(Ray(eye_pos, dir), 0) / spp;  
+                framebuffer[idx] += scene.castRay(Ray(eye_pos, dir), 0) / spp;  
             }
-            m++;
         }
-        UpdateProgress(j / (float)scene.height);
     }
     UpdateProgress(1.f);
 

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cmath>
 #include <random>
+#include <atomic>
 
 #undef M_PI
 #define M_PI 3.141592653589793f
@@ -28,11 +29,19 @@ inline  bool solveQuadratic(const float &a, const float &b, const float &c, floa
     return true;
 }
 
+// inline float get_random_float()
+// {
+//     std::random_device dev;
+//     std::mt19937 rng(dev());
+//     std::uniform_real_distribution<float> dist(0.f, 1.f); // distribution in range [0, 1)
+
+//     return dist(rng);
+// }
+
 inline float get_random_float()
 {
-    std::random_device dev;
-    std::mt19937 rng(dev());
-    std::uniform_real_distribution<float> dist(0.f, 1.f); // distribution in range [1, 6]
+    thread_local std::mt19937 rng(std::random_device{}());
+    thread_local std::uniform_real_distribution<float> dist(0.f, 1.f);
 
     return dist(rng);
 }
@@ -51,3 +60,10 @@ inline void UpdateProgress(float progress)
     std::cout << "] " << int(progress * 100.0) << " %\r";
     std::cout.flush();
 };
+
+inline void AddProgress(float prog)
+{
+    static std::atomic<int> total_prog(0);
+    total_prog.fetch_add(prog * 100);
+    UpdateProgress((float)(total_prog) / 100.0f);
+}

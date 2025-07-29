@@ -65,6 +65,13 @@
         "cinttypes": "cpp",
         "typeinfo": "cpp",
         "valarray": "cpp",
-        "optional": "cpp"
-    }
+        "optional": "cpp",
+        "*.ppm" : "image"
+    },
+    "workbench.editorAssociations": [
+        {
+            "viewType": "default",
+            "filenamePattern": "*.ppm"
+        }
+    ]
 }
